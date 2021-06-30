@@ -4,3 +4,8 @@ Took the red-wine data from UCI Machine Learning repository, did feature selecti
 To View My HTML output, please either download the html or rmd file, or click on the following link: 
 
 https://amish18.github.io/Red-Wine-Classification/Red-Wine-Classification.html
+
+
+Following is the link for the original dataset:
+
+http://archive.ics.uci.edu/ml/datasets/Wine+Quality
