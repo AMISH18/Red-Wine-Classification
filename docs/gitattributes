@@ -1,1 +1,1 @@
-input/*.html linguist-vendored
+input/*.html linguist-detectable=false
