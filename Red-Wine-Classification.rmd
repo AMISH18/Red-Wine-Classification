@@ -1,0 +1,534 @@
+
+## Red Wine Classification - Amish Kapoor
+
+**Part A:** Background and Data Exploration
+
+4. Importing the red wine dataset
+
+```{r, warning = FALSE}
+
+red_wine <- read.csv("D:/MS Business Analytics – University of Cincinnati/Classroom Notes and Exercises/Summer 2021/BANA - Statistical Modelling/Final_Take_Home_Assignment/Dataset/winequality-red.csv", sep = ";")
+
+head(red_wine)
+
+```
+
+Summary statistics for each variable in the dataset
+
+```{r}
+summary(red_wine)
+
+```
+
+```{r}
+str(red_wine)
+```
+
+**Part B:** Visualization and Initial Models for a Binary Response
+
+**1. Creating a new binary variable excellent based on the given condition**
+
+```{r}
+
+red_wine$excellent <- ifelse(red_wine$quality >=7,1,0)
+
+str(red_wine$excellent)
+```
+
+Removing Duplicate Rows from the Dataset
+```{r}
+sum(duplicated(red_wine))
+
+library(dplyr)
+
+red_wine1 <- red_wine %>% distinct(fixed.acidity, volatile.acidity, citric.acid, residual.sugar,chlorides, free.sulfur.dioxide, total.sulfur.dioxide, density, pH,sulphates,alcohol,quality,excellent, .keep_all = TRUE)
+
+```
+
+After removing duplicates, we have 1359 unique observations and 13 variables
+
+**2. Calculating the proportion of excellent red wine (i.e., excellent == 1)**
+
+```{r}
+
+pie_chart <- round(table(red_wine1$excellent)/length(red_wine1$excellent)*100, 1)
+labls <- c("Others", "Excellent")
+labls <- paste(labls, pie_chart)
+labls <- paste(labls, "%", sep = "")
+pie(table(red_wine1$excellent), labels = labls, col = rainbow(length(labls)), main = "Pie chart for Showing Proportion of Excellent Red Wines")
+
+
+```
+
+**3. Visualizing the association between the binary response “excellent” and each of the explanatory variables/predictors**
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+p1 <- ggplot(red_wine1, aes(x = fixed.acidity, y = excellent)) + geom_point()
+p2 <- ggplot(red_wine1, aes(x = volatile.acidity, y = excellent)) + geom_point()
+p3 <- ggplot(red_wine1, aes(x = citric.acid, y = excellent)) + geom_point()
+p4 <- ggplot(red_wine1, aes(x = residual.sugar, y = excellent)) + geom_point()
+
+grid.arrange(p1, p2,p3, p4, nrow = 2, ncol = 2)
+```
+
+
+```{r}
+p5 <- ggplot(red_wine1, aes(x = chlorides , y = excellent)) + geom_point()
+p6 <- ggplot(red_wine1, aes(x = free.sulfur.dioxide, y = excellent)) + geom_point()
+p7 <- ggplot(red_wine1, aes(x = total.sulfur.dioxide, y = excellent)) + geom_point()
+p8 <- ggplot(red_wine1, aes(x = density, y = excellent)) + geom_point()
+
+grid.arrange(p5, p6, p7, p8, nrow = 2, ncol = 2)
+```
+
+
+
+```{r}
+p9 <- ggplot(red_wine1, aes(x = pH, y = excellent)) + geom_point()
+p10 <- ggplot(red_wine1, aes(x = sulphates, y = excellent)) + geom_point()
+p11 <- ggplot(red_wine1, aes(x = alcohol, y = excellent)) + geom_point()
+
+grid.arrange(p9 ,p10, p11, nrow = 2, ncol = 2)
+```
+
+Clearly, we can see some sort of relation between each predictor variable and binary response for quality
+
+Let's visualize further to see the association
+
+```{r, warning = FALSE}
+library(ggpubr)
+
+q1 <- ggplot(red_wine1,aes(x=fixed.acidity,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.5)
+q2 <- ggplot(red_wine1,aes(x=volatile.acidity,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.01) 
+q3 <- ggplot(red_wine1,aes(x=citric.acid,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.01)
+q4 <- ggplot(red_wine1,aes(x= residual.sugar,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.5) 
+
+ggarrange(q1, q2,q3, q4, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+```{r}
+q5 <- ggplot(red_wine1,aes(x=chlorides,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.01)
+q6 <- ggplot(red_wine1,aes(x=free.sulfur.dioxide,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 1) 
+q7 <- ggplot(red_wine1,aes(x=total.sulfur.dioxide,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 5)
+q8 <- ggplot(red_wine1,aes(x= density,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.0001) 
+
+ggarrange(q5, q6,q7, q8, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+```{r}
+q9 <- ggplot(red_wine1,aes(x=pH,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.01)
+q10 <- ggplot(red_wine1,aes(x=sulphates,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.01) 
+q11 <- ggplot(red_wine1,aes(x=alcohol,fill=as.factor(excellent)))+ geom_histogram(position="dodge",binwidth = 0.1)
+
+ggarrange(q9, q10,q11, nrow = 2, ncol = 2, common.legend = TRUE, legend = "bottom")
+```
+
+Clearly, we can see some sort of relation with the excellent across variables,hence, keeping all the variables in the model as of now.
+
+**4. Fitting the linear model**
+
+```{r}
+model1 <- lm(excellent ~ . -quality, data = red_wine1)  
+summary(model1)
+```
+
+Following are the key points from the above model: 
+
+* From the above summary, we can see that we have a very low value for adjusted R-square
+* Statistically significant variables are fixed acidity, volatile acidity, residual sugar, chlorides, density, sulphates and alcohol
+* Also, volatile acidity, chlorides, free sulphur dioxide, total sulphur dioxide and density have negative association with the binary response 'excellent', while the remaining predictor varibales have positive association with the same
+
+**5. Using Logistic Regression to fit the same model**
+
+```{r}
+model2 <- glm(excellent ~ . -quality , data = red_wine1, family = binomial(link = 'logit'))
+summary(model2)
+```
+
+Following are the key summary points for logistic regression:
+
+* Fixed acidity, volatile acidity, residual sugar, chlorides, total sulphur dioxide, density, sulphates and alcohol are statistically significant varibales; we can see that total sulphur dioxide was not coming out to be statistically significant in the linear model
+* Also, volatile acidity, citric acid, chlorides, total sulphur dioxide and density have negative association with the binary response 'excellent', while the remaining predictor varibales have positive association with the same
+
+**Part C.** Variable Selection, Interpretation, and Prediction for a logistic model
+
+**1. Find collinearity in the dataset, then see which one you should pick, after that do model selection using AIC/BIC and Chi-square test**
+
+```{r, warning= FALSE}
+library(corrplot)
+library(ggcorrplot)
+
+red_winef <- red_wine[,c("fixed.acidity", "volatile.acidity", "citric.acid", "residual.sugar","chlorides", "free.sulfur.dioxide", "total.sulfur.dioxide", "density", "pH","sulphates","alcohol","excellent") ]
+corr <- round(cor(red_winef), 1)
+ggcorrplot(corr, hc.order = TRUE, type = "lower", lab = TRUE)
+
+```
+
+From the model, we can see some  collinearity between the following: 
+* Fixed acidity and pH
+* Total sulphur dioxide and free sulphur dioxide 
+* Density and fixed acidity
+* Fixed acidity and citric acid
+
+However, we will not drop any predictor variables as of now and will go ahead with the full model
+
+Now doing chi-square test to select predictors
+
+```{r}
+drop1(model2, test="Chi")
+```
+
+Removing citric.acid and repeating the chi-square test
+
+```{r}
+model3 <- glm(excellent ~ . -quality -citric.acid , data = red_wine1, family = binomial(link = 'logit'))
+
+```
+
+```{r}
+
+drop1(model3, test="Chi")
+
+```
+Removing pH and updating the model
+
+```{r}
+model4 <- glm(excellent ~ . -quality -citric.acid -pH, data = red_wine1, family = binomial(link = 'logit'))
+drop1(model4, test="Chi")
+```
+
+Again, removing free sulphur dioxide and repeating the Chi-square test
+
+```{r}
+model5 <- glm(excellent ~ . -quality -citric.acid -pH -free.sulfur.dioxide, data = red_wine1, family = binomial(link = 'logit'))
+drop1(model5, test="Chi")
+```
+
+Now, we can see that there is no predictor variable, with insignificant p-value.
+
+Let's check if step AIC also gives the same model
+
+```{r, warning = FALSE}
+library(MASS)
+stepAIC(model2)
+```
+
+We are getting the same model from Chi square test and step AIC, i.e. model5
+
+**2.** Now, pH is not in our final model, and interpretation for alcohol and residual sugar is as follows:
+
+* With 1 unit increase in residual sugar, the odds of wine becoming excellent increase by e^0.21908
+* With 1 unit increase in alcohol, the odds of wine becoming excellent increase by e^0.76927
+
+**3** Create the confusion matrix for predicted probabilities
+
+```{r}
+
+linear_pred <- predict(model5)
+pred_prob <- predict(model5, type = "response")
+
+# Predicted outcomes using 0.5 probability
+pred_out <- ifelse(pred_prob <0.5, "No", "Yes")
+
+red_wine_c <- data.frame(red_wine1, pred_prob, pred_out)
+xtabs(~excellent+pred_out, red_wine_c)
+
+```
+
+Calculating the specificity and sensitivity
+
+```{r}
+
+specificity <- (1136/ (1136+39))
+sensitivity <- (62/(122 + 62))
+
+print(specificity)
+print(sensitivity)
+
+```
+Sensitivity is very low for this model, i.e. we are getting a lot of false negatives in our data
+
+To rectify this, we can decrease the threshold probability to the optimum value, where we get both specificity and sensitivity on the higher side
+
+```{r}
+threashold <- seq(0.01, 0.5, 0.01)
+
+sensitivity_1 <- specificity_1 <- rep(NA, length(threashold))
+
+for (j in seq(along = threashold)){
+  pp <- ifelse(red_wine_c$pred_prob < threashold[j], "No", "Yes")
+  xx <- xtabs(~excellent+pp, red_wine_c)
+  specificity_1[j] <- xx[1,1]/(xx[1,1] + xx[1,2])
+  sensitivity_1[j] <- xx[2,2]/(xx[2,1] + xx[2,2])
+}
+
+matplot(threashold, cbind(sensitivity_1, specificity_1), type = "l", xlab = "Threashold", ylab = "Proportion", lty = 1:2)
+plot(1-specificity_1, sensitivity_1, type = "l")
+
+
+```
+
+Looking at the above graph, we can approximately take the threashold probability to be around **0.15**
+
+```{r}
+
+# Predicted outcomes using 0.15 probability
+pred_out_final <- ifelse(pred_prob <0.15, "No", "Yes")
+
+xtabs(~excellent+pred_out_final, red_wine_c)
+
+```
+We can see significant improvement  in the predictions
+
+```{r}
+library(pROC)
+library(ROCR)
+
+pred_1<- predict(model5, data= red_wine1)
+pred_c <- prediction(pred_1, red_wine1$excellent)
+performance_m <- performance(pred_c, "tpr", "fpr")
+plot(performance_m, colorize=TRUE)
+unlist(slot(performance(pred_c, "auc"), "y.values"))
+
+```
+
+The AUC for this model is: 0.8833395
+
+**Doing Prediction for 1st and 268th bottle in the dataset**
+
+1. For 1st bottle
+
+```{r}
+predict(model5, red_wine1[1,], type = "link", se = T)
+predict(model5, red_wine1[1,], type = "response", se = T)
+```
+Calculating Confidence Interval
+
+```{r, warning = FALSE}
+library(faraway)
+round(ilogit(c(-4.91055 - 1.96*0.3053951,-4.91055 + 1.96*0.3053951 )), 3)
+round(c(0.007314538 - 1.96*0.002217485 ,0.007314538 + 1.96*0.002217485 ), 3)
+```
+
+2. For 268th bottle
+
+```{r}
+predict(model5, red_wine1[268,], type = "link", se = T)
+predict(model5, red_wine1[268,], type = "response", se = T)
+```
+
+Confidence Interval
+
+```{r}
+round(ilogit(c(-4.694139  - 1.96*0.2750547,-4.694139  + 1.96*0.2750547)), 3)
+round(c(0.009065797  - 1.96*0.002470984  ,0.009065797  + 1.96*0.002470984  ), 3)
+```
+
+From above, we can see that we have approximately the same values for confidence interval of predicted probabilities
+
+**Prediction by using optimal threshold value of 0.15 or 0.5**
+
+Since, both the prodicted probabilities are < the threshold probability of 0.15, as well as 0.5, the model is saying that the wines are not excellent, or excellent == 0
+
+Now, let's look at the actual values
+
+```{r}
+red_wine1[1,]$excellent
+red_wine1[268,]$excellent
+```
+
+We can see that the actual values are also 0, hence, our model is predicting right
+
+***Part D**: Link Functions and Dispersion Parameter
+
+Fitting the same model with link functions probit and c log log
+
+```{r, warning = FALSE}
+#Probit Model
+
+red_wine_final <- red_wine1[,c(-12,-14)]
+
+model5_logit <- glm(excellent ~ .-citric.acid -pH -free.sulfur.dioxide , data = red_wine_final, family = binomial(link = 'logit'))
+
+model5_probit <- glm(excellent ~ .-citric.acid -pH -free.sulfur.dioxide , data = red_wine_final, family = binomial(link = 'probit'))
+
+model5_loglog <- glm(excellent ~ . -citric.acid -pH -free.sulfur.dioxide, data =red_wine_final, family = binomial(link = 'cloglog'))
+
+```
+
+
+```{r}
+
+summary(model5_logit)
+summary(model5_probit)
+summary(model5_loglog)
+
+```
+Looking at the AIC, and residual deviance values for the 3 models, we have the following:
+
+**AIC Values:** 
+
+logit: 756.48
+probit: 754.01
+cloglog: 820.92
+
+**Residual Deviance:**
+
+logit: 738.48
+probit: 736.01
+cloglog: 802.92
+
+* Based on the above 2 parameters, we can say that probit model is better than logit and cloglog
+
+* Comparing the signs of all the predictor variables, all the 3 models give the same sign for all the predictor variables in the final models
+
+* Comparing the size of variables, we observe that the predictors from the logit variables are ~1.7–1.8 times the predictors in both probit and cloglog models  
+
+Now let's visualize the ROC curve and compare the AUC values for the 3 models 
+
+```{r}
+#Logit
+pred_1<- predict(model5_logit, data= red_wine_final)
+pred_c <- prediction(pred_1, red_wine_final$excellent)
+performance_m <- performance(pred_c, "tpr", "fpr")
+plot(performance_m, colorize=TRUE)
+unlist(slot(performance(pred_c, "auc"), "y.values"))
+```
+
+
+```{r}
+#Probit
+pred_2<- predict(model5_probit, data= red_wine_final)
+pred_c1 <- prediction(pred_2, red_wine_final$excellent)
+performance_m1 <- performance(pred_c1, "tpr", "fpr")
+plot(performance_m1, colorize=TRUE)
+unlist(slot(performance(pred_c1, "auc"), "y.values"))
+```
+
+```{r}
+#cloglog
+pred_3<- predict(model5_loglog, data= red_wine_final)
+pred_c2 <- prediction(pred_3, red_wine_final$excellent)
+performance_m2 <- performance(pred_c2, "tpr", "fpr")
+plot(performance_m2, colorize=TRUE)
+unlist(slot(performance(pred_c2, "auc"), "y.values"))
+```
+
+Comapring the AUC value for the 3 models: 
+
+* Logit: 0.8833395
+* Probit: 0.883136
+* cloglog: 0.8820259
+
+We can see that the AUC values for logit model is marginally higher, followed by probit and cloglog.
+
+Checking for the predicted probabilities of 3 models on the higher tail of the curve
+
+```{r}
+predval <- sapply(list(model5_logit, model5_probit, model5_loglog), fitted)
+round(predval[fitted(model5_logit) > 0.70,],3)
+```
+
+Even though the absolute probability values differ (clog log is giving higher probability towards the upper tail);  all of them are predicting the same thing, i.e. the selected wines are excellent, as they are all above the threshold of 0.15 or even 0.5
+
+Based on all of the above factors, we can concluded that **probit** model can be considered the best among these 
+
+Updating the dispersion coefficient for the model
+
+```{r}
+sigma_squared <- sum(residuals(model5_logit, type = "pearson")^2)/(nrow(red_wine_final)-9)
+
+summary(model5_logit, dispersion = sigma_squared)
+```
+The **standard error** for each of the predictor variables **decreased** after adjusting for the dispersion parameter, the *coefficient values, AIC and residual deviance* of the model **remains the same**.  
+
+**Part E:** Modeling the wine quality as Multinomial variable with order 
+
+**1. Extracting unique quality values and then plotting histograms**
+
+```{r}
+red_wine_m <- red_wine1[,c(-13,-14,-15)]
+
+red_wine_m$quality_f <- as.factor(red_wine_m$quality)
+red_wine_m$quality <- as.numeric(red_wine_m$quality)
+levels(red_wine_m$quality_f)
+hist(red_wine_m$quality, breaks = 4)
+
+```
+
+Since, this is ordinal data, we will trat this data having multinomial distribution with order, and model it accordingly 
+
+Calculating the kendall correlation coefficient and arranging the predictors according to absolute value of their coerrelation coefficient with the quality variable
+
+```{r}
+corr1 <- cor(red_wine_m$quality, red_wine_m[, c(-12, -13)], method = c("kendall"))
+rank <- corr1[, order(abs(corr1), decreasing = TRUE)]
+rank <- data.frame(rank)
+rank
+```
+
+Taking top 5 predictors (excluding citric acid, since it has good correlation with volatile acidity and it does not fit the model well when added)
+
+**5. Fitting the model on ordinal data, i.e. quality**
+
+```{r, warning = FALSE}
+library(VGAM)
+model6 <- vglm(quality ~ .  -pH -quality  -quality_f -citric.acid - fixed.acidity - residual.sugar - density - free.sulfur.dioxide, family = cumulative(parallel = TRUE), red_wine_m)
+
+summary(model6)
+
+```
+
+**Key differences between the logistic and multinomial ordered model**
+
+* In the logistic model, we got a good model with 8 predictors, however, in this model, we are getting a model with only 5 predictors
+
+* Also, the direction of the coefficients is opposite, when compared with logistic regression.
+
+Additionally, we can draw the following implication from exponentiated coefficients:
+
+For 1 unit increase in alcohol, odds of quality being, **3, 4, 5, 6 and 7**, chnages by 0.4263 times the odds of quality being 8.
+
+Calculating the probability of 1st and 268th bottle using predictvglm function 
+
+```{r}
+
+# 1st bottle
+a <- predictvglm(model6, type = "response", newdata = as.data.frame(red_wine_m[1,]))
+a
+prob_atleast_7_1 <- sum(a[,"7"], a[,"8"])
+paste("Probability for 1st bottle is:", round(prob_atleast_7_1,4))
+
+#268th bottle
+b <- predictvglm(model6, type = "response", newdata = as.data.frame(red_wine_m[268,]))
+b
+prob_atleast_7_268 <- sum(a[,"7"], a[,"8"])
+paste("Probability for 1st bottle is:", round(prob_atleast_7_268,4))
+
+```
+
+Using the model5 of the logistic regression
+
+```{r}
+predict(model5, red_wine1[1,], type = "response")
+predict(model5, red_wine1[268,], type = "response")
+```
+Clearly, we can see that we are getting different values for the probabilities. 
+
+However, for a threshold value of 0.5, both the models will predict the same response, i.e. wine is not excellent.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
